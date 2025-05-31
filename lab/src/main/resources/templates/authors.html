@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Авторы</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap @5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { padding: 30px; }
+        .form-group { margin-bottom: 1rem; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1 class="mb-4">Управление Авторами</h1>
+    <a href="/movies" class="btn btn-outline-primary mb-4">Перейти к фильмам</a>
+
+    <div class="row">
+        <!-- Форма создания/обновления -->
+        <div class="col-md-6">
+            <h3>Добавить / Обновить автора</h3>
+            <form id="authorForm">
+                <input type="hidden" id="id">
+                <div class="form-group">
+                    <label for="name">Имя:</label>
+                    <input type="text" class="form-control" id="name" required>
+                </div>
+                <div class="form-group">
+                    <label for="country">Страна:</label>
+                    <input type="text" class="form-control" id="country" required>
+                </div>
+                <div class="form-group">
+                    <label for="birthYear">Год рождения:</label>
+                    <input type="number" class="form-control" id="birthYear" required>
+                </div>
+                <button type="submit" class="btn btn-success">Сохранить</button>
+                <button type="button" class="btn btn-secondary" onclick="resetForm()">Очистить</button>
+            </form>
+        </div>
+
+        <!-- Список авторов -->
+        <div class="col-md-6">
+            <h3>Все авторы</h3>
+            <ul class="list-group" id="authorsList"></ul>
+        </div>
+    </div>
+
+    <hr>
+
+    <div class="mt-4">
+        <h3>Получить автора по ID</h3>
+        <div class="input-group mb-3">
+            <input type="number" class="form-control" id="getAuthorId" placeholder="Введите ID">
+            <button class="btn btn-info text-white" onclick="getAuthor()">Получить</button>
+        </div>
+        <pre id="authorData" class="bg-light p-3 rounded"></pre>
+    </div>
+</div>
+
+<script>
+    const baseUrl = 'http://localhost:8086/api/authors';
+
+    // Загрузка всех авторов при открытии страницы
+    window.onload = () => loadAuthors();
+
+    function loadAuthors() {
+        fetch(baseUrl)
+            .then(res => res.json())
+            .then(data => {
+                const list = document.getElementById('authorsList');
+                list.innerHTML = '';
+                data.forEach(author => {
+                    const item = document.createElement('li');
+                    item.className = 'list-group-item d-flex justify-content-between align-items-center';
+                    item.innerHTML = `
+                        ${author.name} (${author.country}, ${author.birthYear})
+                        <div>
+                            <button class="btn btn-sm btn-warning me-1" onclick='editAuthor(${JSON.stringify(author)})'>Изменить</button>
+                            <button class="btn btn-sm btn-danger" onclick='deleteAuthor(${author.id})'>Удалить</button>
+                        </div>
+                    `;
+                    list.appendChild(item);
+                });
+            });
+    }
+
+    document.getElementById('authorForm').addEventListener('submit', function (e) {
+        e.preventDefault();
+        const author = {
+            id: document.getElementById('id').value || null,
+            name: document.getElementById('name').value,
+            country: document.getElementById('country').value,
+            birthYear: parseInt(document.getElementById('birthYear').value)
+        };
+
+        const method = author.id ? 'PUT' : 'POST';
+        const url = author.id ? `${baseUrl}/${author.id}` : baseUrl;
+
+        fetch(url, {
+            method: method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(author)
+        }).then(() => {
+            alert('Автор сохранён');
+            resetForm();
+            loadAuthors();
+        });
+    });
+
+    function getAuthor() {
+        const id = document.getElementById('getAuthorId').value;
+        fetch(`${baseUrl}/${id}`)
+            .then(res => res.json())
+            .then(data => {
+                document.getElementById('authorData').textContent = JSON.stringify(data, null, 2);
+            })
+            .catch(() => alert('Ошибка при получении данных'));
+    }
+
+    function deleteAuthor(id) {
+        if (!confirm("Удалить этого автора?")) return;
+        fetch(`${baseUrl}/${id}`, {
+            method: 'DELETE'
+        }).then(() => {
+            alert('Автор удалён');
+            loadAuthors();
+        });
+    }
+
+    function editAuthor(author) {
+        document.getElementById('id').value = author.id;
+        document.getElementById('name').value = author.name;
+        document.getElementById('country').value = author.country;
+        document.getElementById('birthYear').value = author.birthYear;
+    }
+
+    function resetForm() {
+        document.getElementById('authorForm').reset();
+        document.getElementById('id').value = '';
+    }
+</script>
+
+</body>
+</html>
