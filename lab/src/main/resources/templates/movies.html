@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Фильмы</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap @5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { padding: 30px; }
+        .form-group { margin-bottom: 1rem; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1 class="mb-4">Управление Фильмами</h1>
+    <a href="/authors" class="btn btn-outline-primary mb-4">Перейти к авторам</a>
+
+    <div class="row">
+        <!-- Форма создания/обновления -->
+        <div class="col-md-6">
+            <h3>Добавить / Обновить фильм</h3>
+            <form id="movieForm">
+                <input type="hidden" id="id">
+                <div class="form-group">
+                    <label for="title">Название:</label>
+                    <input type="text" class="form-control" id="title" required>
+                </div>
+                <div class="form-group">
+                    <label for="genre">Жанр:</label>
+                    <input type="text" class="form-control" id="genre" required>
+                </div>
+                <div class="form-group">
+                    <label for="releaseYear">Год выпуска:</label>
+                    <input type="number" class="form-control" id="releaseYear" required>
+                </div>
+                <div class="form-group">
+                    <label for="authorId">ID Автора:</label>
+                    <input type="number" class="form-control" id="authorId" required>
+                </div>
+                <button type="submit" class="btn btn-success">Сохранить</button>
+                <button type="button" class="btn btn-secondary" onclick="resetForm()">Очистить</button>
+            </form>
+        </div>
+
+        <!-- Список фильмов -->
+        <div class="col-md-6">
+            <h3>Все фильмы</h3>
+            <ul class="list-group" id="moviesList"></ul>
+        </div>
+    </div>
+
+    <hr>
+
+    <div class="mt-4">
+        <h3>Получить фильм по ID</h3>
+        <div class="input-group mb-3">
+            <input type="number" class="form-control" id="getMovieId" placeholder="Введите ID">
+            <button class="btn btn-info text-white" onclick="getMovie()">Получить</button>
+        </div>
+        <pre id="movieData" class="bg-light p-3 rounded"></pre>
+    </div>
+</div>
+
+<script>
+    const baseUrl = 'http://localhost:8086/api/movies';
+
+    window.onload = () => loadMovies();
+
+    function loadMovies() {
+        fetch(baseUrl)
+            .then(res => res.json())
+            .then(data => {
+                const list = document.getElementById('moviesList');
+                list.innerHTML = '';
+                data.forEach(movie => {
+                    const item = document.createElement('li');
+                    item.className = 'list-group-item d-flex justify-content-between align-items-center';
+                    item.innerHTML = `
+                        ${movie.title} (${movie.genre}, ${movie.releaseYear})
+                        <div>
+                            <button class="btn btn-sm btn-warning me-1" onclick='editMovie(${JSON.stringify(movie)})'>Изменить</button>
+                            <button class="btn btn-sm btn-danger" onclick='deleteMovie(${movie.id})'>Удалить</button>
+                        </div>
+                    `;
+                    list.appendChild(item);
+                });
+            });
+    }
+
+    document.getElementById('movieForm').addEventListener('submit', function (e) {
+        e.preventDefault();
+        const movie = {
+            id: document.getElementById('id').value || null,
+            title: document.getElementById('title').value,
+            genre: document.getElementById('genre').value,
+            releaseYear: parseInt(document.getElementById('releaseYear').value),
+            author: { id: parseInt(document.getElementById('authorId').value) }
+        };
+
+        const method = movie.id ? 'PUT' : 'POST';
+        const url = movie.id ? `${baseUrl}/${movie.id}` : baseUrl;
+
+        fetch(url, {
+            method: method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(movie)
+        }).then(() => {
+            alert('Фильм сохранён');
+            resetForm();
+            loadMovies();
+        });
+    });
+
+    function getMovie() {
+        const id = document.getElementById('getMovieId').value;
+        fetch(`${baseUrl}/${id}`)
+            .then(res => res.json())
+            .then(data => {
+                document.getElementById('movieData').textContent = JSON.stringify(data, null, 2);
+            })
+            .catch(() => alert('Ошибка при получении данных'));
+    }
+
+    function deleteMovie(id) {
+        if (!confirm("Удалить этот фильм?")) return;
+        fetch(`${baseUrl}/${id}`, {
+            method: 'DELETE'
+        }).then(() => {
+            alert('Фильм удалён');
+            loadMovies();
+        });
+    }
+
+    function editMovie(movie) {
+        document.getElementById('id').value = movie.id;
+        document.getElementById('title').value = movie.title;
+        document.getElementById('genre').value = movie.genre;
+        document.getElementById('releaseYear').value = movie.releaseYear;
+        document.getElementById('authorId').value = movie.author?.id || '';
+    }
+
+    function resetForm() {
+        document.getElementById('movieForm').reset();
+        document.getElementById('id').value = '';
+    }
+</script>
+
+</body>
+</html>
